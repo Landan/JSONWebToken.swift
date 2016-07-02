@@ -5,14 +5,6 @@
 Swift implementation of [JSON Web Token](https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32).
 Adapted for Vapor framework.
 
-## Installation
-
-[CocoaPods](http://cocoapods.org/) is the recommended installation method.
-
-```ruby
-pod 'JSONWebToken'
-```
-
 ## Usage
 
 ```swift
@@ -22,13 +14,13 @@ import JWT
 ### Encoding a claim
 
 ```swift
-JWT.encode(["my": "payload"], algorithm: .HS256("secret"))
+JWT.encode(payload: ["my": "payload"], algorithm: .HS256("secret"))
 ```
 
 #### Building a JWT with the builder pattern
 
 ```swift
-JWT.encode(.HS256("secret")) { builder in
+JWT.encode(algorithm: .HS256("secret")) { builder in
   builder.issuer = "fuller.li"
   builder.issuedAt = NSDate()
   builder["custom"] = "Hi"
