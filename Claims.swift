@@ -1,10 +1,10 @@
 import Foundation
 
 func validateClaims(payload:Payload, audience:String?, issuer:String?) -> InvalidToken? {
-  return validateIssuer(payload, issuer: issuer) ?? validateAudience(payload, audience: audience) ??
-    validateDate(payload, key: "exp", comparison: .OrderedAscending, failure: .ExpiredSignature, decodeError: "Expiration time claim (exp) must be an integer") ??
-    validateDate(payload, key: "nbf", comparison: .OrderedDescending, failure: .ImmatureSignature, decodeError: "Not before claim (nbf) must be an integer") ??
-    validateDate(payload, key: "iat", comparison: .OrderedDescending, failure: .InvalidIssuedAt, decodeError: "Issued at claim (iat) must be an integer")
+  return validateIssuer(payload: payload, issuer: issuer) ?? validateAudience(payload: payload, audience: audience) ??
+    validateDate(payload: payload, key: "exp", comparison: .orderedAscending, failure: .ExpiredSignature, decodeError: "Expiration time claim (exp) must be an integer") ??
+    validateDate(payload: payload, key: "nbf", comparison: .orderedDescending, failure: .ImmatureSignature, decodeError: "Not before claim (nbf) must be an integer") ??
+    validateDate(payload: payload, key: "iat", comparison: .orderedDescending, failure: .InvalidIssuedAt, decodeError: "Issued at claim (iat) must be an integer")
 }
 
 func validateAudience(payload:Payload, audience:String?) -> InvalidToken? {

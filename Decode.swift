@@ -2,7 +2,7 @@ import Foundation
 
 
 /// Failure reasons from decoding a JWT
-public enum InvalidToken : CustomStringConvertible, ErrorType {
+public enum InvalidToken : CustomStringConvertible, ErrorProtocol {
   /// Decoding the JWT itself failed
   case DecodeError(String)
 
@@ -48,10 +48,10 @@ public enum InvalidToken : CustomStringConvertible, ErrorType {
 
 /// Decode a JWT
 public func decode(jwt:String, algorithms:[Algorithm], verify:Bool = true, audience:String? = nil, issuer:String? = nil) throws -> Payload {
-  switch load(jwt) {
+  switch load(jwt: jwt) {
   case let .Success(header, payload, signature, signatureInput):
     if verify {
-      if let failure = validateClaims(payload, audience: audience, issuer: issuer) ?? verifySignature(algorithms, header: header, signingInput: signatureInput, signature: signature) {
+      if let failure = validateClaims(payload: payload, audience: audience, issuer: issuer) ?? verifySignature(algorithms: algorithms, header: header, signingInput: signatureInput, signature: signature) {
         throw failure
       }
     }
@@ -64,7 +64,7 @@ public func decode(jwt:String, algorithms:[Algorithm], verify:Bool = true, audie
 
 /// Decode a JWT
 public func decode(jwt:String, algorithm:Algorithm, verify:Bool = true, audience:String? = nil, issuer:String? = nil) throws -> Payload {
-  return try decode(jwt, algorithms: [algorithm], verify: verify, audience: audience, issuer: issuer)
+  return try decode(jwt: jwt, algorithms: [algorithm], verify: verify, audience: audience, issuer: issuer)
 }
 
 // MARK: Parsing a JWT
@@ -75,7 +75,7 @@ enum LoadResult {
 }
 
 func load(jwt:String) -> LoadResult {
-  let segments = jwt.componentsSeparatedByString(".")
+  let segments = jwt.components(separatedBy: ".")
   if segments.count != 3 {
     return .Failure(.DecodeError("Not enough segments"))
   }
@@ -85,27 +85,27 @@ func load(jwt:String) -> LoadResult {
   let signatureSegment = segments[2]
   let signatureInput = "\(headerSegment).\(payloadSegment)"
 
-  let headerData = base64decode(headerSegment)
+  let headerData = base64decode(input: headerSegment)
   if headerData == nil {
     return .Failure(.DecodeError("Header is not correctly encoded as base64"))
   }
 
-  let header = (try? NSJSONSerialization.JSONObjectWithData(headerData!, options: NSJSONReadingOptions(rawValue: 0))) as? Payload
+  let header = (try? NSJSONSerialization.jsonObject(with: headerData!, options: NSJSONReadingOptions(rawValue: 0))) as? Payload
   if header == nil {
     return .Failure(.DecodeError("Invalid header"))
   }
 
-  let payloadData = base64decode(payloadSegment)
+  let payloadData = base64decode(input: payloadSegment)
   if payloadData == nil {
     return .Failure(.DecodeError("Payload is not correctly encoded as base64"))
   }
 
-  let payload = (try? NSJSONSerialization.JSONObjectWithData(payloadData!, options: NSJSONReadingOptions(rawValue: 0))) as? Payload
+  let payload = (try?  NSJSONSerialization.jsonObject(with:payloadData!, options: NSJSONReadingOptions(rawValue: 0))) as? Payload
   if payload == nil {
     return .Failure(.DecodeError("Invalid payload"))
   }
 
-  let signature = base64decode(signatureSegment)
+  let signature = base64decode(input: signatureSegment)
   if signature == nil {
     return .Failure(.DecodeError("Signature is not correctly encoded as base64"))
   }
@@ -118,7 +118,7 @@ func load(jwt:String) -> LoadResult {
 func verifySignature(algorithms:[Algorithm], header:Payload, signingInput:String, signature:NSData) -> InvalidToken? {
   if let alg = header["alg"] as? String {
     let matchingAlgorithms = algorithms.filter { algorithm in  algorithm.description == alg }
-    let results = matchingAlgorithms.map { algorithm in algorithm.verify(signingInput, signature: signature) }
+    let results = matchingAlgorithms.map { algorithm in algorithm.verify(message: signingInput, signature: signature) }
     let successes = results.filter { $0 }
     if successes.count > 0 {
       return nil
