@@ -1,9 +1,8 @@
 # JSON Web Token
 
-[![Build Status](https://github.com/Landan/JSONWebToken.swift/master.svg?style=flat)](https://travis-ci.org/kylef/JSONWebToken.swift)
-
 Swift implementation of [JSON Web Token](https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32).
 Adapted for Vapor framework.
+Works on Linux.
 
 ## Usage
 
@@ -23,7 +22,7 @@ JWT.encode(payload: ["my": "payload"], algorithm: .HS256("secret"))
 JWT.encode(algorithm: .HS256("secret")) { builder in
   builder.issuer = "fuller.li"
   builder.issuedAt = NSDate()
-  builder["custom"] = "Hi"
+  builder.customJSON = JSON(["custom": "value"])
 }
 ```
 
