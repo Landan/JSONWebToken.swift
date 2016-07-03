@@ -1,9 +1,9 @@
 import Foundation
 import HMAC
 import SHA2
+import Vapor
 
-
-public typealias Payload = [String:AnyObject]
+public typealias Payload = JSON
 
 /// The supported Algorithms
 public enum Algorithm : CustomStringConvertible {
@@ -54,11 +54,11 @@ public enum Algorithm : CustomStringConvertible {
     /// Sign a message using the algorithm
     func sign(message:String) -> String {
         func signHS<T: HashProtocol>(key:String, variant: T.Type) -> String {
-            let keyData = key.data(using: NSUTF8StringEncoding, allowLossyConversion: false)!
-            let messageData = message.data(using: NSUTF8StringEncoding, allowLossyConversion: false)!
+            let keyData = key.data
+            let messageData = message.data
 
-            let result = HMAC<T>.authenticate(message: messageData, withKey: keyData)
-            return base64encode(input: result)
+            let result = HMAC<T>.authenticate(message: messageData.bytes, withKey: keyData.bytes)
+            return base64encode(input: Data(result))
         }
         
         switch self {
@@ -77,7 +77,7 @@ public enum Algorithm : CustomStringConvertible {
     }
     
     /// Verify a signature for a message using the algorithm
-    func verify(message:String, signature:NSData) -> Bool {
+    func verify(message:String, signature: Data) -> Bool {
         return sign(message: message) == base64encode(input: signature)
     }
 }
@@ -91,14 +91,14 @@ public enum Algorithm : CustomStringConvertible {
  */
 public func encode(payload:Payload, algorithm: Algorithm) -> String {
     func encodeJSON(payload:Payload) -> String? {
-        if let data = try? NSJSONSerialization.data(withJSONObject: payload, options: NSJSONWritingOptions(rawValue: 0)) {
-            return base64encode(input: data)
-        }
-        
-        return nil
+        return base64encode(input: payload.data)
     }
     
-    let header = encodeJSON(payload: ["typ": "JWT", "alg": algorithm.description])!
+    let header = encodeJSON(payload:
+        JSON([
+            "typ": "JWT",
+            "alg": algorithm.description
+            ]))!
     let payload = encodeJSON(payload: payload)!
     let signingInput = "\(header).\(payload)"
     let signature = algorithm.sign(message: signingInput)
@@ -106,77 +106,44 @@ public func encode(payload:Payload, algorithm: Algorithm) -> String {
 }
 
 public class PayloadBuilder {
-    var payload = Payload()
-    
-    public var issuer:String? {
-        get {
-            return payload["iss"] as? String
-        }
-        set {
-            payload["iss"] = newValue
-        }
-    }
-    
-    public var audience:String? {
-        get {
-            return payload["aud"] as? String
-        }
-        set {
-            payload["aud"] = newValue
-        }
-    }
-    
-    public var expiration:NSDate? {
-        get {
-            if let expiration = payload["exp"] as? NSTimeInterval {
-                return NSDate(timeIntervalSince1970: expiration)
-            }
-            
-            return nil
-        }
-        set {
-            payload["exp"] = newValue?.timeIntervalSince1970
-        }
-    }
-    
-    public var notBefore:NSDate? {
-        get {
-            if let notBefore = payload["nbf"] as? NSTimeInterval {
-                return NSDate(timeIntervalSince1970: notBefore)
-            }
-            
-            return nil
-        }
-        set {
-            payload["nbf"] = newValue?.timeIntervalSince1970
-        }
-    }
-    
-    public var issuedAt:NSDate? {
-        get {
-            if let issuedAt = payload["iat"] as? NSTimeInterval {
-                return NSDate(timeIntervalSince1970: issuedAt)
-            }
-            
-            return nil
-        }
-        set {
-            payload["iat"] = newValue?.timeIntervalSince1970
-        }
-    }
-    
-    public subscript(key: String) -> AnyObject? {
-        get {
-            return payload[key]
-        }
-        set {
-            payload[key] = newValue
-        }
-    }
+    public var issuer: String?
+    public var audience: String?
+    public var expiration: NSDate?
+    public var notBefore:NSDate?
+    public var issuedAt:NSDate?
+    public var customJSON: JSON?
 }
 
 public func encode(algorithm:Algorithm, closure:((PayloadBuilder) -> ())) -> String {
     let builder = PayloadBuilder()
     closure(builder)
-    return encode(payload: builder.payload, algorithm: algorithm)
+    
+    var mainJSON = [String: JSONRepresentable]()
+    if let issuer = builder.issuer {
+        mainJSON = ["iss": issuer]
+    }
+    
+    if let audience = builder.audience {
+        mainJSON["aud"] = audience
+    }
+    
+    if let expiration = builder.expiration {
+        mainJSON["exp"] = expiration.timeIntervalSince1970
+    }
+    
+    if let notBefore = builder.notBefore {
+        mainJSON["nbf"] = notBefore.timeIntervalSince1970
+    }
+    
+    if let issuedAt = builder.issuedAt {
+        mainJSON["iat"] = issuedAt.timeIntervalSince1970
+    }
+    
+    if let customJSON = builder.customJSON {
+        for item in customJSON.dictionary! {
+            mainJSON[item.key] = item.value
+        }
+    }
+
+    return encode(payload:JSON(mainJSON), algorithm: algorithm)
 }
