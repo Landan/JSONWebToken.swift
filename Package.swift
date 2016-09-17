@@ -4,5 +4,7 @@ let package = Package(
     name: "JWT",
     dependencies: [
        
-        ]
+        ],
+    exclude: [
+    ]
 )
