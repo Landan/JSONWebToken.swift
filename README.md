@@ -1,3 +1,7 @@
+# Update
+
+This repo is not actual anymore, the original one already supports Linux.
+
 # JSON Web Token
 
 Swift implementation of [JSON Web Token](https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32).
