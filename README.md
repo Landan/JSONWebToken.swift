@@ -1,6 +1,6 @@
 # Update
 
-This repo is not actual anymore, the original one already supports Linux.
+This fork is not actual anymore, the original repo already supports Linux.
 
 # JSON Web Token
 
